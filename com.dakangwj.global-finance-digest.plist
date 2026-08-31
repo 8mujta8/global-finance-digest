@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.dakangwj.global-finance-digest</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/env</string>
+    <string>python3</string>
+    <string>/Users/xman/Documents/换模特/global_finance_digest.py</string>
+  </array>
+  <key>StartInterval</key>
+  <integer>900</integer>
+  <key>StandardOutPath</key>
+  <string>/Users/xman/Documents/换模特/global_finance_digest.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/xman/Documents/换模特/global_finance_digest.error.log</string>
+</dict>
+</plist>

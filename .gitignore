@@ -1,0 +1,4 @@
+.env
+.last_sent_london_date
+*.log
+__pycache__/
