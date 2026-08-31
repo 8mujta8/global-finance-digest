@@ -19,7 +19,7 @@ from urllib.parse import quote
 from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
-RECIPIENT = "dakangwj@gmail.com"
+RECIPIENTS = ["dakangwj@gmail.com", "jasminewxr@gmail.com"]
 LONDON = ZoneInfo("Europe/London")
 UTC = timezone.utc
 STATE_FILE = Path(__file__).with_name(".last_sent_london_date")
@@ -119,7 +119,7 @@ def send(subject: str, plain: str, html_body: str) -> None:
     message = EmailMessage()
     message["Subject"] = subject
     message["From"] = user
-    message["To"] = RECIPIENT
+    message["To"] = ", ".join(RECIPIENTS)
     message.set_content(plain)
     message.add_alternative(html_body, subtype="html")
     with smtplib.SMTP_SSL("smtp.gmail.com", 465, context=ssl.create_default_context(), timeout=30) as smtp:
@@ -146,7 +146,7 @@ def main() -> int:
         return 0
     send(subject, plain, html_body)
     STATE_FILE.write_text(today + "\n", encoding="utf-8")
-    print(f"Sent {len(articles)} articles to {RECIPIENT}.")
+    print(f"Sent {len(articles)} articles to {', '.join(RECIPIENTS)}.")
     return 0
 
 
