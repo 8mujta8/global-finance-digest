@@ -136,7 +136,7 @@ def main() -> int:
     now = datetime.now(LONDON)
     today = now.date().isoformat()
     already_sent = STATE_FILE.exists() and STATE_FILE.read_text().strip() == today
-    if not args.force and not args.preview and (now.hour != 8 or already_sent):
+    if not args.force and not args.preview and (now.hour != 10 or already_sent):
         print(f"Skipped: London time is {now:%H:%M}; already sent today: {already_sent}.")
         return 0
     articles = recent_articles()
