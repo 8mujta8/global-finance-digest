@@ -20,13 +20,15 @@ from urllib.request import Request, urlopen
 from zoneinfo import ZoneInfo
 
 RECIPIENTS = ["dakangwj@gmail.com", "jasminewxr@gmail.com"]
-LONDON = ZoneInfo("Europe/London")
+BEIJING = ZoneInfo("Asia/Shanghai")
 UTC = timezone.utc
 STATE_FILE = Path(__file__).with_name(".last_sent_london_date")
 SOURCES = [
     ("Global markets", "https://news.google.com/rss/search?q=" + quote("global finance markets economy when:1d") + "&hl=en-GB&gl=GB&ceid=GB:en"),
     ("Central banks", "https://news.google.com/rss/search?q=" + quote("central bank inflation interest rates when:1d") + "&hl=en-GB&gl=GB&ceid=GB:en"),
     ("Business", "https://feeds.bbci.co.uk/news/business/rss.xml"),
+    ("Finance backup", "https://news.google.com/rss/search?q=" + quote("finance business markets when:1d") + "&hl=en-US&gl=US&ceid=US:en"),
+    ("Economy backup", "https://news.google.com/rss/search?q=" + quote("economy GDP trade companies when:1d") + "&hl=en-US&gl=US&ceid=US:en"),
 ]
 
 
@@ -48,7 +50,7 @@ def text(node: ET.Element | None, tag: str) -> str:
 
 def get_feed(label: str, url: str) -> list[dict[str, object]]:
     request = Request(url, headers={"User-Agent": "Mozilla/5.0 (finance-digest/1.0)"})
-    with urlopen(request, timeout=25) as response:
+    with urlopen(request, timeout=12) as response:
         root = ET.fromstring(response.read())
     articles = []
     for item in root.findall(".//item"):
@@ -72,10 +74,13 @@ def recent_articles() -> list[dict[str, object]]:
     cutoff = datetime.now(UTC) - timedelta(hours=24)
     collected = []
     for label, url in SOURCES:
-        try:
-            collected.extend(get_feed(label, url))
-        except Exception as error:  # A single unavailable source must not stop delivery.
-            print(f"Warning: could not read {label}: {error}", file=sys.stderr)
+        for attempt in range(2):
+            try:
+                collected.extend(get_feed(label, url))
+                break
+            except Exception as error:  # A single unavailable source must not stop delivery.
+                if attempt == 1:
+                    print(f"Warning: could not read {label}: {error}", file=sys.stderr)
     seen = set()
     unique = []
     for article in sorted(collected, key=lambda a: a["published"] or datetime.min.replace(tzinfo=UTC), reverse=True):
@@ -92,9 +97,9 @@ def recent_articles() -> list[dict[str, object]]:
 
 
 def render(articles: list[dict[str, object]]) -> tuple[str, str]:
-    now = datetime.now(LONDON)
+    now = datetime.now(BEIJING)
     subject = f"Global finance briefing | {now:%d %b %Y}"
-    lines = [f"Global finance briefing - {now:%d %B %Y, %H:%M} London", ""]
+    lines = [f"Global finance briefing - {now:%d %B %Y, %H:%M} Beijing", ""]
     rows = []
     for number, article in enumerate(articles, 1):
         title = str(article["title"])
@@ -107,7 +112,7 @@ def render(articles: list[dict[str, object]]) -> tuple[str, str]:
         rows.append("<li>No qualifying articles were available from the configured sources.</li>")
     plain = "\n".join(lines)
     body = "".join(rows)
-    html_body = f'''<html><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;line-height:1.45;color:#202124;max-width:680px;margin:auto"><h2 style="margin-bottom:4px">Global finance briefing</h2><p style="margin-top:0;color:#666">{now:%d %B %Y, %H:%M} London time</p><ol style="padding-left:22px">{body}</ol><p style="font-size:12px;color:#777">Selected from public news feeds published in the preceding 24 hours.</p></body></html>'''
+    html_body = f'''<html><body style="font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Arial,sans-serif;line-height:1.45;color:#202124;max-width:680px;margin:auto"><h2 style="margin-bottom:4px">Global finance briefing</h2><p style="margin-top:0;color:#666">{now:%d %B %Y, %H:%M} Beijing time</p><ol style="padding-left:22px">{body}</ol><p style="font-size:12px;color:#777">Selected from public news feeds published in the preceding 24 hours.</p></body></html>'''
     return subject, plain, html_body
 
 
@@ -129,15 +134,15 @@ def send(subject: str, plain: str, html_body: str) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--force", action="store_true", help="Send regardless of London time and prior delivery.")
+    parser.add_argument("--force", action="store_true", help="Send regardless of prior delivery.")
     parser.add_argument("--preview", action="store_true", help="Print the digest instead of sending it.")
     args = parser.parse_args()
     load_dotenv(Path(__file__).with_name(".env"))
-    now = datetime.now(LONDON)
+    now = datetime.now(BEIJING)
     today = now.date().isoformat()
     already_sent = STATE_FILE.exists() and STATE_FILE.read_text().strip() == today
-    if not args.force and not args.preview and (now.hour != 10 or already_sent):
-        print(f"Skipped: London time is {now:%H:%M}; already sent today: {already_sent}.")
+    if not args.force and not args.preview and already_sent:
+        print(f"Skipped: already sent today: {already_sent}.")
         return 0
     articles = recent_articles()
     subject, plain, html_body = render(articles)
